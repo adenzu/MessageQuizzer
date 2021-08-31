@@ -16,7 +16,7 @@ async def on_ready():
             if str(channel.type) == "text":
                 print(channel)
                 try:
-                    await get_messages(channel, 5000)
+                    await get_messages(channel)
                 except:
                     pass
 
