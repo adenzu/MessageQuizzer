@@ -1,5 +1,4 @@
 from collections import defaultdict
-import linecache
 import time
 import random
 
@@ -8,7 +7,7 @@ short_term_memory = defaultdict(list)
 number_of_messages = defaultdict(int)
 last_time_written = time.time()
 write_every_seconds = 30
-newline_identifier = "752465953.9166822"
+newline_identifier = str(random.random() * time.time())
 
 
 def encode_newlines(text):
@@ -22,6 +21,13 @@ def is_message_qualified(message):
 
 def create_quote(message):
     return encode_newlines(f"{message.content}\n-||`{message.author.name.ljust(32)}`||") + "\n"
+
+def get_quote(guild_id, quote_index):
+    with open(f"messagequizzer/messages/{guild_id}.txt", "r") as file:
+        for index, quote in enumerate(file):
+            if index == quote_index:
+                return quote
+    return ''
 
 def add_message(message):
     short_term_memory[message.guild.id].append(create_quote(message))
@@ -49,18 +55,18 @@ async def write_history():
 
         short_term_memory.clear()
         last_time_written = time.time()
-        linecache.updatecache(f"messagequizzer/messages/{guild}.txt")
 
 def get_random_message(guild_id):
     message = "No available message is read yet."
 
     if number_of_messages[guild_id]:
         quote_index = random.randrange(number_of_messages[guild_id])
-        quote = linecache.getline(f"messagequizzer/messages/{guild_id}.txt", quote_index)
+        quote = get_quote(guild_id, quote_index)
         message = decode_newlines(quote)
-        print("from file\n", quote, guild_id, quote_index, number_of_messages[guild_id])
+        print("from file\n", message)
 
     elif short_term_memory[guild_id]:
         message = decode_newlines(random.choice(short_term_memory[guild_id]))
-        print("from ram")
+        print("from ram\n", message)
+
     return message

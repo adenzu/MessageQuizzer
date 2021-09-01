@@ -37,5 +37,6 @@ async def on_message(message):
 
     if is_message_qualified(message):
         add_message(message)
+        
     elif message.content == COMMAND:
         await message.channel.send(get_random_message(message.guild.id))
