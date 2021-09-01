@@ -21,7 +21,7 @@ def is_message_qualified(message):
     return not message.author.bot and message.content.count(" ") > 1 and message.content[0].isalpha()
 
 def create_quote(message):
-    return encode_newlines(f"{message.content}\n-||{message.author.name.ljust(32)}||") + "\n"
+    return encode_newlines(f"{message.content}\n-||`{message.author.name.ljust(32)}`||") + "\n"
 
 def add_message(message):
     short_term_memory[message.guild.id].append(create_quote(message))
