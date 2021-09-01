@@ -21,7 +21,7 @@ def is_message_qualified(message):
     return not message.author.bot and message.content.count(" ") > 1 and message.content[0].isalpha()
 
 def create_quote(message):
-    return encode_newlines(f"{message.content}\n-||{message.author.display_name.ljust(32)}||") + "\n"
+    return encode_newlines(f"{message.content}\n-||{message.author.name.ljust(32)}||") + "\n"
 
 def add_message(message):
     short_term_memory[message.guild.id].append(create_quote(message))
@@ -49,15 +49,18 @@ async def write_history():
 
         short_term_memory.clear()
         last_time_written = time.time()
+        linecache.updatecache(f"messagequizzer/messages/{guild}.txt")
 
 def get_random_message(guild_id):
     message = "No available message is read yet."
 
     if number_of_messages[guild_id]:
         quote_index = random.randrange(number_of_messages[guild_id])
-        message = decode_newlines(linecache.getline(f"messagequizzer/messages/{guild_id}.txt", quote_index))
+        quote = linecache.getline(f"messagequizzer/messages/{guild_id}.txt", quote_index)
+        message = decode_newlines(quote)
+        print("from file\n", quote, guild_id, quote_index, number_of_messages[guild_id])
 
     elif short_term_memory[guild_id]:
         message = decode_newlines(random.choice(short_term_memory[guild_id]))
-
+        print("from ram")
     return message
