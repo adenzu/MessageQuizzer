@@ -25,6 +25,9 @@ async def on_message(message):
     if message.author.bot:
         return
     
-    elif message.content == COMMAND:
+    if message.content.count(" ") > 3 and message.content[0].isalpha():
+        messages[message.guild][message.author].append(message.content)
+
+    if message.content == COMMAND:
         author = random.choice(list(messages[message.guild]))
         await message.channel.send(random.choice(messages[message.guild][author]) + f"\n-||{author.name}||")
