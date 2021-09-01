@@ -1,6 +1,5 @@
 from messagequizzer.config import *
-from messagequizzer.get_messages import get_messages
-from messagequizzer.messages import messages
+from messagequizzer.message_handler import *
 
 import discord
 import random
@@ -9,25 +8,34 @@ bot = discord.Client()
 
 @bot.event
 async def on_ready():
-    print(f"Logged in as {bot.user}")
-
+    print(f"Logged in as {bot.user}") 
+    
     for guild in bot.guilds:
-        for channel in guild.channels:
-            if str(channel.type) == "text":
-                print(channel)
-                try:
-                    await get_messages(channel)
-                except:
-                    pass
+        for channel in guild.text_channels:
+            print(channel)
+            try:
+                await read_history(channel)
+            except discord.Forbidden:
+                pass
+            
+@bot.event
+async def on_guild_join(guild):
+    for channel in guild.text_channels:
+        print(channel)
+        try:
+            await read_history(channel)
+        except discord.Forbidden:
+            pass
 
 @bot.event
 async def on_message(message):
     if message.author.bot:
         return
     
-    if message.content.count(" ") > 3 and message.content[0].isalpha():
-        messages[message.guild][message.author].append(message.content)
+    if should_write_history():
+        await write_history()
 
-    if message.content == COMMAND:
-        author = random.choice(list(messages[message.guild]))
-        await message.channel.send(random.choice(messages[message.guild][author]) + f"\n-||{author.name}||")
+    if is_message_qualified(message):
+        add_message(message)
+    elif message.content == COMMAND:
+        await message.channel.send(get_random_message(message.guild.id))
