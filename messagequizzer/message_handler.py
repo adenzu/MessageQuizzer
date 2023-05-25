@@ -2,71 +2,73 @@ from collections import defaultdict
 import time
 import random
 
+from messagequizzer.db.database import *
+from messagequizzer.config import *
 
-short_term_memory = defaultdict(list)
-number_of_messages = defaultdict(int)
+short_term_message_memory = []
+short_term_author_memory = defaultdict(lambda: None)
+short_term_guild_memory = defaultdict(lambda: None)
 last_time_written = time.time()
-write_every_seconds = 30
-newline_identifier = str(random.random() * time.time())
 
 
-def encode_newlines(text):
-    return text.replace("\n", newline_identifier)
+def create_quote(message: Message, author_name: str):
+    return f"{message.content}\n-||`{author_name.ljust(32)}`||"
 
-def decode_newlines(text):
-    return text.replace(newline_identifier, "\n")
 
 def is_message_qualified(message):
-    return not message.author.bot and message.content.count(" ") > 1 and message.content[0].isalpha()
+    return (
+        not message.author.bot
+        and message.content.count(" ") > 1
+        and message.content[0].isalpha()
+    )
 
-def create_quote(message):
-    return encode_newlines(f"{message.content}\n-||`{message.author.name.ljust(32)}`||") + "\n"
 
-def get_quote(guild_id, quote_index):
-    with open(f"messagequizzer/messages/{guild_id}.txt", "r") as file:
-        for index, quote in enumerate(file):
-            if index == quote_index:
-                return quote
-    return ''
+def convert_message(message) -> Message:
+    return Message(None, message.author.id, message.guild.id, message.content)
+
 
 def add_message(message):
-    short_term_memory[message.guild.id].append(create_quote(message))
+    short_term_author_memory[message.author.id] = message.author.display_name
+    short_term_message_memory.append(convert_message(message))
+
 
 def should_write_history():
-    return time.time() - last_time_written > write_every_seconds
+    return time.time() - last_time_written > DATABASE_UPDATE_COOLDOWN
+
 
 async def read_history(channel, limit=None):
-    async for message in channel.history(limit=limit):
+    after: datetime.datetime = None
+
+    if short_term_guild_memory[channel.guild.id]:
+        after = short_term_guild_memory[channel.guild.id]
+    else:
+        guild = guild_dao.get_guild_by_id(channel.guild.id)
+        if guild:
+            after = guild.last_read
+
+    async for message in channel.history(limit=limit, after=after):
         if is_message_qualified(message):
             add_message(message)
 
             if should_write_history():
                 await write_history()
 
+
 async def write_history():
     global last_time_written
 
-    if short_term_memory:
-        for guild in short_term_memory:
-            number_of_messages[guild] += len(short_term_memory[guild])
-
-            with open(f"messagequizzer/messages/{guild}.txt", "a", encoding="utf-8") as file:
-                file.writelines(short_term_memory[guild])
-
-        short_term_memory.clear()
+    if short_term_message_memory:
+        for message in short_term_message_memory:
+            message_dao.insert_message(message)
         last_time_written = time.time()
 
+
 def get_random_message(guild_id):
-    message = "No available message is read yet."
-
-    if number_of_messages[guild_id]:
-        quote_index = random.randrange(number_of_messages[guild_id])
-        quote = get_quote(guild_id, quote_index)
-        message = decode_newlines(quote)
-        print("from file\n", message)
-
-    elif short_term_memory[guild_id]:
-        message = decode_newlines(random.choice(short_term_memory[guild_id]))
-        print("from ram\n", message)
-
-    return message
+    message = message_dao.get_random_message_by_server_id(guild_id)
+    if message == None:
+        message = random.choice(short_term_message_memory)
+    if short_term_author_memory[message.author_id]:
+        return create_quote(message, short_term_author_memory[message.author_id])
+    else:
+        author = author_dao.get_author_by_id(message.author_id)
+        return create_quote(message, author.display_name)

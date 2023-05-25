@@ -1,2 +1,5 @@
+**/__pycache__
 .env
 messagequizzer/messages
+**/*.db
+**/bot_token.py
