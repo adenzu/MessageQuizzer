@@ -67,7 +67,6 @@ async def read_history(channel: discord.TextChannel, limit=None) -> None:
             after = guild.last_read
 
     async for message in channel.history(limit=limit, after=after):
-        print(message.content)
         if is_message_qualified(message):
             add_message(message)
 
