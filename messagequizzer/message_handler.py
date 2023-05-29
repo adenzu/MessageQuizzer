@@ -1,27 +1,17 @@
 from collections import defaultdict
 import time
 import random
-import functools
-import typing
-import asyncio
 import discord
 
 from messagequizzer.database import *
 from messagequizzer.config import *
 
 
-def to_thread(func: typing.Callable) -> typing.Coroutine:
-    @functools.wraps(func)
-    async def wrapper(*args, **kwargs):
-        return await asyncio.to_thread(func, *args, **kwargs)
-
-    return wrapper
-
-
-short_term_message_memory = []
-short_term_author_memory = defaultdict(lambda: None)
-short_term_guild_memory = defaultdict(lambda: None)
-last_time_written = 0
+short_term_message_memory = defaultdict(list)
+short_term_author_memory = {}
+short_term_channel_memory = {}
+short_term_guild_author_memory = []
+last_time_written = time.time()
 
 
 def create_quote(message: Message, author_name: str):
@@ -40,16 +30,15 @@ def convert_message(message: discord.Message) -> Message:
     return Message(message.id, message.author.id, message.guild.id, message.content)
 
 
-def get_author(message: discord.Message) -> Author:
-    return Author(
-        None, message.author.id, message.guild.id, message.author.display_name
+def add_message(message: discord.Message, update_last_read: bool) -> None:
+    if update_last_read:
+        # problematic
+        short_term_channel_memory[message.channel.id] = datetime.datetime.now()
+    short_term_author_memory[message.author.id] = message.author.display_name
+    short_term_message_memory[message.guild.id].append(convert_message(message))
+    short_term_guild_author_memory.append(
+        GuildAuthor(message.guild.id, message.author.id)
     )
-
-
-def add_message(message: discord.Message) -> None:
-    short_term_guild_memory[message.guild.id] = datetime.datetime.now()
-    short_term_author_memory[message.author.id] = get_author(message)
-    short_term_message_memory.append(convert_message(message))
 
 
 def should_write_history() -> bool:
@@ -59,43 +48,50 @@ def should_write_history() -> bool:
 async def read_history(channel: discord.TextChannel, limit=None) -> None:
     after: datetime.datetime = None
 
-    if short_term_guild_memory[channel.guild.id]:
-        after = short_term_guild_memory[channel.guild.id]
+    if channel.id in short_term_channel_memory:
+        after = short_term_channel_memory[channel.id]
     else:
-        guild = guild_dao.get_guild_by_id(channel.guild.id)
-        if guild:
-            after = guild.last_read
-
+        channel_db = channel_dao.get_channel_by_id(channel.id)
+        if channel_db:
+            after = channel_db.last_read
     async for message in channel.history(limit=limit, after=after):
         if is_message_qualified(message):
-            add_message(message)
+            add_message(message, True)
 
             if should_write_history():
                 await write_history()
+    print(f"Finished reading #{channel.name} of {channel.guild.name}!")
+
+async def get_author_guild_pairs(messages: list[Message]) -> list[tuple[int, int]]:
+    return [(message.author_id, message.guild_id) for message in messages]
 
 
 async def write_history() -> None:
     global last_time_written
 
-    if short_term_message_memory:
-        await message_dao.insert_messages(short_term_message_memory)
-        await author_dao.insert_authors(short_term_author_memory.values())
-        await guild_dao.insert_guilds(short_term_guild_memory)
+    print("Updating the database...")
+
+    for messages in short_term_message_memory.values():
+        await message_dao.insert_messages(messages)
+        await author_dao.insert_authors(short_term_author_memory)
+        await channel_dao.insert_channels(short_term_channel_memory)
+        await guild_author_dao.insert_authors_to_guilds(short_term_guild_author_memory)
         last_time_written = time.time()
-        short_term_message_memory.clear()
+        short_term_author_memory.clear()
+        short_term_channel_memory.clear()
+
+    short_term_message_memory.clear()
 
 
-def get_authors_of_same_guild_except(author: Author):
-    authors = author_dao.get_authors_of_same_guild_except(author)
-    return authors
-
-
-def get_random_message(guild_id) -> tuple[Message, Author]:
-    message = message_dao.get_random_message_by_server_id(guild_id)
-    if message == None:
-        message = random.choice(short_term_message_memory)
-    if short_term_author_memory[message.author_id]:
-        return (message, short_term_author_memory[message.author_id])
+def get_author(message: Message) -> Author:
+    if message.author_id in short_term_author_memory:
+        return Author(message.author_id, short_term_author_memory[message.author_id])
     else:
-        author = author_dao.get_author_by_id(message.author_id)
-        return (message, author)
+        return author_dao.get_author_by_id(message.author_id)
+
+
+def get_random_message(guild_id: int) -> Message:
+    message = message_dao.get_random_message_by_guild_id(guild_id)
+    if message == None and guild_id in short_term_message_memory:
+        message = random.choice(short_term_message_memory[guild_id])
+    return message

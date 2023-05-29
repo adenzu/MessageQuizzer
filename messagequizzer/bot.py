@@ -19,7 +19,7 @@ bot = discord.Client(intents=intents)
 async def on_ready():
     print(f"Logged in as {bot.user}")
 
-    print("Catching up!")
+    print("Catching up!\n")
     for guild in bot.guilds:
         for channel in guild.text_channels:
             print(f"Checking #{channel.name} of {guild.name}")
@@ -27,8 +27,8 @@ async def on_ready():
                 await read_history(channel)
             except discord.Forbidden:
                 pass
-        print(f"Finished reading {guild}!\n")
-    print("Finished reading!")
+        print(f"Finished read initialization {guild}!\n")
+    print("Finished read initialization!")
 
 
 @bot.event
@@ -39,7 +39,8 @@ async def on_guild_join(guild: discord.Guild):
             await read_history(channel)
         except discord.Forbidden:
             pass
-    print(f"Finished reading {guild}!")
+    print(f"Finished read initialization {guild}!")
+
 
 class QuestionButton(discord.ui.Button):
     def __init__(
@@ -71,16 +72,22 @@ class QuestionButton(discord.ui.Button):
 
 
 class QuestionView(discord.ui.View):
-    def __init__(self, correct_author: Author, *, timeout: float | None = 180):
+    def __init__(self, message: Message, *, timeout: float | None = 180):
         super().__init__(timeout=timeout)
 
-        self.correct_author = correct_author
+        self.correct_author = get_author(message)
         self.clicked_users = set()
 
-        other_authors = author_dao.get_authors_of_same_guild_except(correct_author)
+        authors = guild_author_dao.get_authors_by_guild(message.guild_id)
 
-        chosen_authors = random.choices(other_authors, k=min(2, len(other_authors)))
-        chosen_authors.append(correct_author)
+        authors = [
+            author
+            for author in authors
+            if author.author_id != self.correct_author.author_id
+        ]
+
+        chosen_authors = random.sample(authors, k=min(2, len(authors)))
+        chosen_authors.append(self.correct_author)
 
         random.shuffle(chosen_authors)
 
@@ -112,10 +119,15 @@ async def on_message(message: discord.Message):
         await write_history()
 
     if is_message_qualified(message):
-        add_message(message)
+        add_message(message, False)
 
     elif message.content == COMMAND:
-        question_message, question_message_author = get_random_message(message.guild.id)
-        await message.channel.send(
-            content=question_message.content, view=QuestionView(question_message_author)
-        )
+        question_message = get_random_message(message.guild.id)
+        if question_message:
+            await message.channel.send(
+                content=question_message.content, view=QuestionView(question_message)
+            )
+        else:
+            await message.channel.send(
+                content="The bot still hasn't read this server's messages enough!"
+            )
