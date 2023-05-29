@@ -115,9 +115,10 @@ class AuthorDAO:
         values = [
             (author.author_id, author.guild_id, author.display_name)
             for author in authors
+            if not self.author_exists(author.author_id)
         ]
         self.cursor.executemany(
-            "INSERT OR REPLACE INTO authors (author_id, guild_id, display_name) VALUES (?, ?, ?)",
+            "INSERT INTO authors (author_id, guild_id, display_name) VALUES (?, ?, ?)",
             values,
         )
         self.conn.commit()

@@ -27,6 +27,8 @@ async def on_ready():
                 await read_history(channel)
             except discord.Forbidden:
                 pass
+        print(f"Finished reading {guild}!\n")
+    print("Finished reading!")
 
 
 @bot.event
@@ -37,7 +39,7 @@ async def on_guild_join(guild: discord.Guild):
             await read_history(channel)
         except discord.Forbidden:
             pass
-
+    print(f"Finished reading {guild}!")
 
 class QuestionButton(discord.ui.Button):
     def __init__(
