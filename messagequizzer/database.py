@@ -13,7 +13,9 @@ class Message:
 
 @dataclass
 class Author:
-    aurhor_id: int
+    id: int
+    author_id: int
+    guild_id: int
     display_name: str
 
 
@@ -24,7 +26,7 @@ class Guild:
 
 
 class MessageDAO:
-    def __init__(self, db_name):
+    def __init__(self, db_name: str):
         self.conn = sqlite3.connect(db_name)
         self.cursor = self.conn.cursor()
 
@@ -34,7 +36,7 @@ class MessageDAO:
             CREATE TABLE IF NOT EXISTS messages (
                 message_id INTEGER PRIMARY KEY,
                 author_id INTEGER,
-                server_id INTEGER,
+                guild_id INTEGER,
                 content TEXT
             )
         """
@@ -43,20 +45,31 @@ class MessageDAO:
 
     def insert_message(self, message: Message):
         self.cursor.execute(
-            "INSERT INTO messages (message_id, author_id, server_id, content) VALUES (?, ?, ?, ?)",
+            "INSERT INTO messages (message_id, author_id, guild_id, content) VALUES (?, ?, ?, ?)",
             (message.message_id, message.author_id, message.guild_id, message.content),
         )
         self.conn.commit()
 
-    def get_random_message_by_server_id(self, server_id) -> Message:
+    async def insert_messages(self, messages: list[Message]):
+        values = [
+            (message.message_id, message.author_id, message.guild_id, message.content)
+            for message in messages
+        ]
+        self.cursor.executemany(
+            "INSERT INTO messages (message_id, author_id, guild_id, content) VALUES (?, ?, ?, ?)",
+            values,
+        )
+        self.conn.commit()
+
+    def get_random_message_by_server_id(self, guild_id: int) -> Message:
         self.cursor.execute(
             """
             SELECT * FROM messages
-            WHERE server_id = ?
+            WHERE guild_id = ?
             ORDER BY RANDOM()
             LIMIT 1
         """,
-            (server_id,),
+            (guild_id,),
         )
         row = self.cursor.fetchone()
         if row:
@@ -69,7 +82,7 @@ class MessageDAO:
 
 
 class AuthorDAO:
-    def __init__(self, db_name):
+    def __init__(self, db_name: str):
         self.conn = sqlite3.connect(db_name)
         self.cursor = self.conn.cursor()
 
@@ -77,7 +90,9 @@ class AuthorDAO:
         self.cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS authors (
-                author_id INTEGER PRIMARY KEY,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                author_id INTEGER,
+                guild_id INTEGER,
                 display_name TEXT
             )
         """
@@ -86,10 +101,41 @@ class AuthorDAO:
 
     def insert_author(self, author: Author):
         self.cursor.execute(
-            "INSERT INTO authors (author_id, display_name) VALUES (?, ?)",
-            (author.aurhor_id, author.display_name),
+            "INSERT INTO authors (author_id, guild_id, display_name) VALUES (?, ?, ?)",
+            (author.author_id, author.guild_id, author.display_name),
         )
         self.conn.commit()
+
+    def author_exists(self, author_id: int) -> bool:
+        self.cursor.execute("SELECT 1 FROM authors WHERE author_id = ?", (author_id,))
+        result = self.cursor.fetchone()
+        return result is not None
+
+    async def insert_authors(self, authors: list[Author]):
+        values = [
+            (author.author_id, author.guild_id, author.display_name)
+            for author in authors
+        ]
+        self.cursor.executemany(
+            "INSERT OR REPLACE INTO authors (author_id, guild_id, display_name) VALUES (?, ?, ?)",
+            values,
+        )
+        self.conn.commit()
+
+    def get_authors_of_same_guild_except(self, author: Author) -> list[Author]:
+        self.cursor.execute(
+            """
+            SELECT * FROM authors
+            WHERE guild_id = ? AND author_id != ?
+        """,
+            (author.guild_id, author.author_id),
+        )
+        rows = self.cursor.fetchall()
+        authors = []
+        for row in rows:
+            author = Author(row[0], row[1], row[2], row[3])
+            authors.append(author)
+        return authors
 
     def get_author_by_id(self, author_id) -> Author:
         self.cursor.execute(
@@ -101,7 +147,7 @@ class AuthorDAO:
         )
         row = self.cursor.fetchone()
         if row:
-            author = Author(row[0], row[1], row[2])
+            author = Author(row[0], row[1], row[2], row[3])
             return author
         return None
 
@@ -110,7 +156,7 @@ class AuthorDAO:
 
 
 class GuildDAO:
-    def __init__(self, db_name):
+    def __init__(self, db_name: str):
         self.conn = sqlite3.connect(db_name)
         self.cursor = self.conn.cursor()
 
@@ -125,14 +171,25 @@ class GuildDAO:
         )
         self.conn.commit()
 
-    def insert_(self, guild: Guild):
+    def insert_guild(self, guild: Guild):
         self.cursor.execute(
             "INSERT INTO guilds (guild_id, last_read) VALUES (?, ?)",
             (guild.guild_id, guild.last_read),
         )
         self.conn.commit()
 
-    def get_guild_by_id(self, guild_id) -> Guild:
+    async def insert_guilds(self, guilds: dict[int, datetime.datetime]):
+        values = [
+            (guild_id, last_read.strftime("%Y-%m-%d %H:%M:%S"))
+            for guild_id, last_read in guilds.items()
+        ]
+        self.cursor.executemany(
+            "INSERT OR REPLACE INTO guilds (guild_id, last_read) VALUES (?, ?)",
+            values,
+        )
+        self.conn.commit()
+
+    def get_guild_by_id(self, guild_id: int) -> Guild:
         self.cursor.execute(
             """
             SELECT * FROM guilds
@@ -142,8 +199,10 @@ class GuildDAO:
         )
         row = self.cursor.fetchone()
         if row:
-            author = Author(row[0], row[1], row[2])
-            return author
+            guild = Guild(
+                row[0], datetime.datetime.strptime(row[1], "%Y-%m-%d %H:%M:%S")
+            )
+            return guild
         return None
 
     def close(self):
