@@ -92,7 +92,7 @@ class QuestionView(discord.ui.View):
         random.shuffle(chosen_authors)
         
         for author in chosen_authors:
-            self.add_item(QuestionButton(self.test, label=author.display_name))
+            self.add_item(QuestionButton(self.on_button_callback, label=author.display_name))
 
     def set_sent_message(self, message: discord.Message):
         self.sent_message = message
