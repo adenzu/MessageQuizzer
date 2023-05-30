@@ -14,10 +14,6 @@ short_term_guild_author_memory = []
 last_time_written = time.time()
 
 
-def create_quote(message: Message, author_name: str):
-    return f"{message.content}\n-||`{author_name.ljust(32)}`||"
-
-
 def is_message_qualified(message: discord.Message):
     return (
         not message.author.bot
