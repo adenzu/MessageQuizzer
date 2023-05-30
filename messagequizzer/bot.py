@@ -98,7 +98,7 @@ class QuestionView(discord.ui.View):
         self.sent_message = message
 
     async def on_timeout(self):
-        self.sent_message.edit(content=f"{self.sent_message.content}\n-||`{self.correct_author.display_name.ljust(MAX_NAME_LENGTH)}`||")
+        await self.sent_message.edit(content=f"{self.sent_message.content}\n-||`{self.correct_author.display_name.ljust(MAX_NAME_LENGTH)}`||")
         self.clear_items()
         return await super().on_timeout()
 
