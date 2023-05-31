@@ -76,7 +76,7 @@ class QuestionView(discord.ui.View):
         super().__init__(timeout=timeout)
 
         self.correct_author = get_author(message)
-        self.clicked_users = set()
+        self.winners = set()
 
         authors = guild_author_dao.get_authors_by_guild(message.guild_id)
 
@@ -112,14 +112,14 @@ class QuestionView(discord.ui.View):
         return await super().on_timeout()
 
     async def on_button_callback(self, label: str, interaction: Interaction):
-        # if interaction.user in self.clicked_users:
-        #     await interaction.response.defer()
-        #     return
-        # self.clicked_users.add(interaction.user)
+        if interaction.user in self.winners:
+            await interaction.response.defer()
+            return
         if label == self.correct_author.display_name:
             await interaction.response.send_message(
                 content=f"{interaction.user.display_name} got the answer!",
             )
+            self.winners.add(interaction.user)
         else:
             await interaction.response.send_message(
                 content=f"It was not {label}!", ephemeral=True
