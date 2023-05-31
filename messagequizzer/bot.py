@@ -77,6 +77,7 @@ class QuestionView(discord.ui.View):
 
         self.correct_author = get_author(message)
         self.winners = set()
+        self.tries = defaultdict(int)
 
         authors = guild_author_dao.get_authors_by_guild(message.guild_id)
 
@@ -116,11 +117,19 @@ class QuestionView(discord.ui.View):
             await interaction.response.defer()
             return
         if label == self.correct_author.display_name:
+            message_content: str
+            if interaction.user.id not in self.tries:
+                message_content = f"{interaction.user.display_name} got the answer at the first try!"
+            elif self.tries[interaction.user.id] <= NUMBER_OF_FALSE_ANSWERS:
+                message_content = f"{interaction.user.display_name} got the answer after {self.tries[interaction.user.id]} tries!"
+            else:
+                message_content = f"{interaction.user.display_name} got the answer after {self.tries[interaction.user.id]} tries..."
             await interaction.response.send_message(
-                content=f"{interaction.user.display_name} got the answer!",
+                content=message_content,
             )
             self.winners.add(interaction.user)
         else:
+            self.tries[interaction.user.id] += 1
             await interaction.response.send_message(
                 content=f"It was not {label}!", ephemeral=True
             )
