@@ -86,34 +86,43 @@ class QuestionView(discord.ui.View):
             if author.author_id != self.correct_author.author_id
         ]
 
-        chosen_authors = random.sample(authors, k=min(NUMBER_OF_FALSE_ANSWERS, len(authors)))
+        chosen_authors = random.sample(
+            authors, k=min(NUMBER_OF_FALSE_ANSWERS, len(authors))
+        )
         chosen_authors.append(self.correct_author)
 
         random.shuffle(chosen_authors)
-        
+
         for author in chosen_authors:
-            self.add_item(QuestionButton(self.on_button_callback, label=author.display_name))
+            self.add_item(
+                QuestionButton(self.on_button_callback, label=author.display_name)
+            )
 
     def set_sent_message(self, message: discord.Message):
         self.sent_message = message
 
+    # async def interaction_check(self, interaction: Interaction[discord.Client]):
+    #     return await super().interaction_check(interaction)
+
     async def on_timeout(self):
-        await self.sent_message.edit(content=f"{self.sent_message.content}\n-||`{self.correct_author.display_name.ljust(MAX_NAME_LENGTH)}`||", view=None)
+        await self.sent_message.edit(
+            content=f"{self.sent_message.content}\n-||`{self.correct_author.display_name.ljust(MAX_NAME_LENGTH)}`||",
+            view=None,
+        )
         return await super().on_timeout()
 
     async def on_button_callback(self, label: str, interaction: Interaction):
-        if interaction.user in self.clicked_users:
-            await interaction.response.defer()
-            return
-        self.clicked_users.add(interaction.user)
+        # if interaction.user in self.clicked_users:
+        #     await interaction.response.defer()
+        #     return
+        # self.clicked_users.add(interaction.user)
         if label == self.correct_author.display_name:
             await interaction.response.send_message(
-                content=f"You are correct! It was {self.correct_author.display_name}!",
-                ephemeral=True,
+                content=f"{interaction.user.display_name} got the answer!",
             )
         else:
             await interaction.response.send_message(
-                content=f"It was {self.correct_author.display_name}!", ephemeral=True
+                content=f"It was not {label}!", ephemeral=True
             )
 
 
