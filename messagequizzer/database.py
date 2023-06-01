@@ -98,7 +98,7 @@ class AuthorDAO:
             """
             CREATE TABLE IF NOT EXISTS authors (
                 author_id INTEGER PRIMARY KEY,
-                name TEXT
+                display_name TEXT
             )
         """
         )
@@ -106,7 +106,7 @@ class AuthorDAO:
 
     def insert_author(self, author: Author):
         self.cursor.execute(
-            "INSERT OR REPLACE INTO authors (author_id, name) VALUES (?, ?)",
+            "INSERT OR REPLACE INTO authors (author_id, display_name) VALUES (?, ?)",
             (author.author_id, author.name),
         )
         self.conn.commit()
@@ -114,7 +114,7 @@ class AuthorDAO:
     async def insert_authors(self, authors: dict[int, str]):
         values = [(id, name) for id, name in authors.items()]
         self.cursor.executemany(
-            "INSERT OR REPLACE INTO authors (author_id, name) VALUES (?, ?)",
+            "INSERT OR REPLACE INTO authors (author_id, display_name) VALUES (?, ?)",
             values,
         )
         self.conn.commit()
