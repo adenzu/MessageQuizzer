@@ -14,7 +14,9 @@ class Message:
 @dataclass
 class Author:
     author_id: int
-    display_name: str
+    name: str
+
+
 
 
 @dataclass
@@ -96,7 +98,7 @@ class AuthorDAO:
             """
             CREATE TABLE IF NOT EXISTS authors (
                 author_id INTEGER PRIMARY KEY,
-                display_name TEXT
+                name TEXT
             )
         """
         )
@@ -104,15 +106,15 @@ class AuthorDAO:
 
     def insert_author(self, author: Author):
         self.cursor.execute(
-            "INSERT OR REPLACE INTO authors (author_id, display_name) VALUES (?, ?)",
-            (author.author_id, author.display_name),
+            "INSERT OR REPLACE INTO authors (author_id, name) VALUES (?, ?)",
+            (author.author_id, author.name),
         )
         self.conn.commit()
 
     async def insert_authors(self, authors: dict[int, str]):
         values = [(id, name) for id, name in authors.items()]
         self.cursor.executemany(
-            "INSERT OR REPLACE INTO authors (author_id, display_name) VALUES (?, ?)",
+            "INSERT OR REPLACE INTO authors (author_id, name) VALUES (?, ?)",
             values,
         )
         self.conn.commit()
@@ -214,8 +216,12 @@ class GuildAuthorDAO:
         self.conn.commit()
 
     async def insert_authors_to_guilds(self, pairs: list[GuildAuthor]):
-        query = "INSERT OR REPLACE INTO GuildAuthors (author_id, guild_id) VALUES (?, ?)"
-        self.cursor.executemany(query, [(pair.author_id, pair.guild_id) for pair in pairs])
+        query = (
+            "INSERT OR REPLACE INTO GuildAuthors (author_id, guild_id) VALUES (?, ?)"
+        )
+        self.cursor.executemany(
+            query, [(pair.author_id, pair.guild_id) for pair in pairs]
+        )
         self.conn.commit()
 
     def get_authors_by_guild(self, guild_id: int) -> list[Author]:

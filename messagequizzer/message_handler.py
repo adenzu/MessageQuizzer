@@ -30,7 +30,7 @@ def add_message(message: discord.Message, update_last_read: bool) -> None:
     if update_last_read:
         # problematic
         short_term_channel_memory[message.channel.id] = datetime.datetime.now()
-    short_term_author_memory[message.author.id] = message.author.display_name
+    short_term_author_memory[message.author.id] = message.author.name
     short_term_message_memory[message.guild.id].append(convert_message(message))
     short_term_guild_author_memory.append(
         GuildAuthor(message.guild.id, message.author.id)

@@ -96,7 +96,7 @@ class QuestionView(discord.ui.View):
 
         for author in chosen_authors:
             self.add_item(
-                QuestionButton(self.on_button_callback, label=author.display_name)
+                QuestionButton(self.on_button_callback, label=author.name)
             )
 
     def set_sent_message(self, message: discord.Message):
@@ -107,7 +107,7 @@ class QuestionView(discord.ui.View):
 
     async def on_timeout(self):
         await self.sent_message.edit(
-            content=f"{self.sent_message.content}\n-||`{self.correct_author.display_name.ljust(MAX_NAME_LENGTH)}`||",
+            content=f"{self.sent_message.content}\n-||`{self.correct_author.name.ljust(MAX_NAME_LENGTH)}`||",
             view=None,
         )
         return await super().on_timeout()
@@ -116,14 +116,16 @@ class QuestionView(discord.ui.View):
         if interaction.user in self.winners:
             await interaction.response.defer()
             return
-        if label == self.correct_author.display_name:
+        if label == self.correct_author.name:
             message_content: str
             if interaction.user.id not in self.tries:
-                message_content = f"{interaction.user.display_name} got the answer at the first try!"
+                message_content = f"{interaction.user.name} got the answer first try!"
+            elif self.tries[interaction.user.id] == 1:
+                message_content = f"{interaction.user.name} got the answer second try!"
             elif self.tries[interaction.user.id] <= NUMBER_OF_FALSE_ANSWERS:
-                message_content = f"{interaction.user.display_name} got the answer after {self.tries[interaction.user.id]} tries!"
+                message_content = f"{interaction.user.name} got the answer after {self.tries[interaction.user.id]} tries!"
             else:
-                message_content = f"{interaction.user.display_name} got the answer after {self.tries[interaction.user.id]} tries..."
+                message_content = f"{interaction.user.name} got the answer after {self.tries[interaction.user.id]} tries..."
             await interaction.response.send_message(
                 content=message_content,
             )
