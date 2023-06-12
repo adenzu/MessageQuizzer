@@ -189,17 +189,17 @@ async def on_message(message: discord.Message):
             content += f"{name.ljust(MAX_NAME_LENGTH)} {f'{score:.2f}'.rjust(len('Avg Guess'))}\n"
 
         await message.channel.send(content=content + "`")
-    elif message.content == MIXES_COMMAND:
-        content = f"# Most Mixed Users\n`{'Correct User'.ljust(MAX_NAME_LENGTH)} {'Guessed User'.ljust(MAX_NAME_LENGTH)} Count\n"
+    # elif message.content == MIXES_COMMAND:
+    #     content = f"# Most Mixed Users\n`{'Correct User'.ljust(MAX_NAME_LENGTH)} {'Guessed User'.ljust(MAX_NAME_LENGTH)} Count\n"
 
-        for mix in sorted(
-            mixed_author_dao.get_all_mixes_by_guild_descending_by_times(
-                message.guild.id, 10
-            ),
-            key=lambda mix: mix.times,
-        ):
-            correct_author = author_dao.get_author_by_id(mix.correct_id)
-            guessed_author = author_dao.get_author_by_id(mix.guessed_id)
-            content += f"{correct_author.name.ljust(MAX_NAME_LENGTH)} {guessed_author.name.ljust(MAX_NAME_LENGTH)} {str(mix.times).rjust(len('Count'))}\n"
+    #     for mix in sorted(
+    #         mixed_author_dao.get_all_mixes_by_guild_descending_by_times(
+    #             message.guild.id, 10
+    #         ),
+    #         key=lambda mix: mix.times,
+    #     ):
+    #         correct_author = author_dao.get_author_by_id(mix.correct_id)
+    #         guessed_author = author_dao.get_author_by_id(mix.guessed_id)
+    #         content += f"{correct_author.name.ljust(MAX_NAME_LENGTH)} {guessed_author.name.ljust(MAX_NAME_LENGTH)} {str(mix.times).rjust(len('Count'))}\n"
 
-        await message.channel.send(content=content + "`")
+    #     await message.channel.send(content=content + "`")
