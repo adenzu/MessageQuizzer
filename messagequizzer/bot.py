@@ -177,10 +177,11 @@ async def on_message(message: discord.Message):
     elif message.content == SCOREBOARD_COMMAND:
         content = f"# Scoreboard\n`{'Name'.ljust(MAX_NAME_LENGTH)} Avg Guess\n"
 
-        for (
-            player
-        ) in player_dao.get_all_players_by_guild_ascending_by_avg_guess_by_score(
-            message.guild.id, 10
+        for player in sorted(
+            player_dao.get_all_players_by_guild_ascending_by_avg_guess_by_score(
+                message.guild.id, 10
+            ),
+            key=lambda player: player.total_tries / player.score,
         ):
             author = author_dao.get_author_by_id(player.player_id)
             name = author.name
@@ -191,8 +192,11 @@ async def on_message(message: discord.Message):
     elif message.content == MIXES_COMMAND:
         content = f"# Most Mixed Users\n`{'Correct User'.ljust(MAX_NAME_LENGTH)} {'Guessed User'.ljust(MAX_NAME_LENGTH)} Count\n"
 
-        for mix in mixed_author_dao.get_all_mixes_by_guild_descending_by_times(
-            message.guild.id, 10
+        for mix in sorted(
+            mixed_author_dao.get_all_mixes_by_guild_descending_by_times(
+                message.guild.id, 10
+            ),
+            key=lambda mix: mix.times,
         ):
             correct_author = author_dao.get_author_by_id(mix.correct_id)
             guessed_author = author_dao.get_author_by_id(mix.guessed_id)
