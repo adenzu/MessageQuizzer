@@ -197,7 +197,7 @@ async def on_message(message: discord.Message):
                 message.guild.id, 10
             ),
             key=lambda mix: mix.times,
-        ):
+        )[::-1]:
             correct_author = author_dao.get_author_by_id(mix.correct_id)
             guessed_author = author_dao.get_author_by_id(mix.guessed_id)
             content += f"{correct_author.name.ljust(MAX_NAME_LENGTH)} {guessed_author.name.ljust(MAX_NAME_LENGTH)} {str(mix.times).rjust(len('Count'))}\n"
