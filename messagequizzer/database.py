@@ -415,7 +415,7 @@ class MixedAuthorDAO:
                 FROM GuildAuthors
                 WHERE guild_id = ?
             )
-            ORDER BY p.times ASC
+            ORDER BY p.times DESC
             LIMIT ?
             """,
             (guild_id, guild_id, limit),
