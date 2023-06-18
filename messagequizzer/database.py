@@ -406,12 +406,19 @@ class MixedAuthorDAO:
             """
             SELECT *
             FROM MixedAuthors p
-            INNER JOIN GuildAuthors ga ON p.correct_id = ga.author_id
-            WHERE ga.guild_id = ?
+            WHERE p.correct_id IN (
+                SELECT author_id
+                FROM GuildAuthors
+                WHERE guild_id = ?
+            ) AND p.guessed_id IN (
+                SELECT author_id
+                FROM GuildAuthors
+                WHERE guild_id = ?
+            )
             ORDER BY p.times DESC
             LIMIT ?
             """,
-            (guild_id, limit),
+            (guild_id, guild_id, limit),
         )
         rows = self.cursor.fetchall()
         mixes = []
