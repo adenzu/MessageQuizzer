@@ -424,7 +424,7 @@ class MixedAuthorDAO:
         mixes = []
         for row in rows:
             player = MixedAuthor(row[0], row[1], row[2])
-            mixes.append(player)
+            mixes.insert(0, player)
         return mixes
 
     async def insert_mix(self, correct_id: int, guessed_id: int, times: int = 1):
